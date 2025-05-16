@@ -1,0 +1,31 @@
+<!-- dashboard/home.html -->
+{% extends 'base.html' %}
+{% load role_tags %}
+{% block content %}
+<div class="vsc-container">
+    {% include 'dashboard/_nav.html' %}
+    <main class="vsc-main">
+        <h2>Welcome to the Ansible Administration Dashboard</h2>
+        <h3>Available Playbooks</h3>
+        <form method="post">
+            {% csrf_token %}
+            <table class="vsc-table">
+                <tr><th>Name</th><th>Description</th><th>Actions</th></tr>
+                {% for playbook in playbooks %}
+                <tr>
+                    <td>{{ playbook.name }}</td>
+                    <td>{{ playbook.description }}</td>
+                    <td>
+                        {% if user.is_authenticated %}
+                            {% if user|has_role:'admin' or user|has_role:'operator' %}
+                                <button class="vsc-btn" type="submit" name="run_playbook_id" value="{{ playbook.pk }}">Run Now</button>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </form>
+    </main>
+</div>
+{% endblock %}

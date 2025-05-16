@@ -1,0 +1,11 @@
+{% comment %} Navigation panel for VS Code dark mode SPA layout {% endcomment %}
+<nav class="vsc-nav">
+    <ul class="vsc-nav-main">
+        <li><a href="{% url 'playbook_list' %}">Playbooks</a></li>
+        <li><a href="{% url 'log_list' %}">Logs</a></li>
+        <li><a href="{% url 'schedule_playbook' %}">Schedule Playbook</a></li>
+    </ul>
+    <ul class="vsc-nav-bottom">
+        <li><a href="/admin/">Django Admin</a></li>
+    </ul>
+</nav>

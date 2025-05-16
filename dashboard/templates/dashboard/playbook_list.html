@@ -1,0 +1,203 @@
+<!-- dashboard/playbook_list.html -->
+{% extends 'base.html' %}
+{% load role_tags %}
+{% block content %}
+<div class="vsc-container">
+    {% include 'dashboard/_nav.html' %}
+    <main class="vsc-main">
+        <h2>Available Playbooks</h2>
+        <button class="vsc-btn" id="add-playbook-btn" style="float:right;margin-bottom:1em;">+ New Playbook</button>
+        <form method="post" id="playbook-list-form">
+            {% csrf_token %}
+            <table class="vsc-table">
+                <tr><th>Name</th><th>Description</th><th>Actions</th></tr>
+                {% for playbook in playbooks %}
+                <tr data-playbook-id="{{ playbook.pk }}">
+                    <td>{{ playbook.name }}</td>
+                    <td>{{ playbook.description }}</td>
+                    <td>
+                        {% if user.is_authenticated %}
+                            {% if user|has_role:'admin' or user|has_role:'operator' %}
+                                <button class="vsc-btn run-now-btn" type="button" data-playbook-id="{{ playbook.pk }}">Run Now</button>
+                                <button class="vsc-btn edit-playbook-btn" type="button" data-playbook-id="{{ playbook.pk }}">Edit</button>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </form>
+        <div id="flyout-form" class="flyout-form">
+            <div class="flyout-header">
+                <span id="flyout-title">Playbook Details</span>
+                <button id="close-flyout" class="vsc-btn" style="float:right;">&times;</button>
+            </div>
+            <form id="playbook-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="playbook_id" id="playbook_id">
+                <label>Name:<input type="text" name="name" id="form_name" required></label>
+                <label>Git Repository:<input type="url" name="git_repo" id="form_git_repo" required></label>
+                <label>Branch:<input type="text" name="repo_branch" id="form_repo_branch" value="main"></label>
+                <label>Project Root:<input type="text" name="project_root" id="form_project_root"></label>
+                <label>Modules:<input type="text" name="modules" id="form_modules" placeholder="comma,separated,modules"></label>
+                <label>Playbook File:<input type="text" name="playbook_file" id="form_playbook_file" required></label>
+                <label>Description:<textarea name="description" id="form_description"></textarea></label>
+                <div style="margin-top:1em;">
+                    <button class="vsc-btn" type="submit" id="save-playbook-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const flyout = document.getElementById('flyout-form');
+    const closeBtn = document.getElementById('close-flyout');
+    const addBtn = document.getElementById('add-playbook-btn');
+    const form = document.getElementById('playbook-form');
+    const title = document.getElementById('flyout-title');
+
+    function openFlyout(data) {
+        flyout.style.right = '0';
+        if (data) {
+            title.textContent = 'Edit Playbook';
+            document.getElementById('playbook_id').value = data.id;
+            document.getElementById('form_name').value = data.name;
+            document.getElementById('form_git_repo').value = data.git_repo;
+            document.getElementById('form_repo_branch').value = data.repo_branch;
+            document.getElementById('form_project_root').value = data.project_root;
+            document.getElementById('form_modules').value = data.modules;
+            document.getElementById('form_playbook_file').value = data.playbook_file;
+            document.getElementById('form_description').value = data.description;
+        } else {
+            title.textContent = 'New Playbook';
+            form.reset();
+            document.getElementById('playbook_id').value = '';
+        }
+    }
+    function closeFlyout() {
+        flyout.style.right = '-500px';
+    }
+    closeBtn.onclick = closeFlyout;
+    addBtn.onclick = function() { openFlyout(null); };
+
+    document.querySelectorAll('.edit-playbook-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const playbookId = btn.getAttribute('data-playbook-id');
+            fetch(`/api/playbook/${playbookId}/`)
+                .then(resp => {
+                    const contentType = resp.headers.get('content-type');
+                    if (contentType && contentType.indexOf('application/json') !== -1) {
+                        return resp.json();
+                    } else {
+                        throw new Error('Not authenticated or server error.');
+                    }
+                })
+                .then(data => openFlyout(data))
+                .catch(err => {
+                    alert('Could not load playbook details: ' + err.message);
+                });
+        });
+    });
+    closeFlyout();
+});
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function pollLog(logId, logUrl) {
+    let interval = setInterval(function() {
+        fetch(logUrl + '?partial=1')
+            .then(resp => resp.text())
+            .then(html => {
+                document.open();
+                document.write(html);
+                document.close();
+            });
+    }, 1000);
+}
+
+document.querySelectorAll('.run-now-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const playbookId = btn.getAttribute('data-playbook-id');
+        btn.disabled = true;
+        btn.textContent = 'Running...';
+        // Immediately create a placeholder log entry and redirect
+        fetch('', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: `run_playbook_id=${playbookId}&redirect_immediate=1`
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data && data.log_id && data.log_url) {
+                window.location.replace(data.log_url + '?live=1');
+            } else {
+                window.location.reload();
+            }
+        })
+        .catch(() => window.location.reload());
+    });
+});
+</script>
+<style>
+.flyout-form {
+    position: fixed;
+    top: 3.2em;
+    right: -500px;
+    width: 400px;
+    height: calc(100vh - 3.2em);
+    background: #23272e;
+    color: #d4d4d4;
+    box-shadow: -2px 0 8px #0005;
+    transition: right 0.3s cubic-bezier(.4,0,.2,1);
+    z-index: 200;
+    padding: 2em 2em 1em 2em;
+    overflow-y: auto;
+    border-left: 1px solid #333;
+}
+.flyout-header {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 1em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.flyout-form label {
+    display: block;
+    margin-bottom: 0.7em;
+}
+.flyout-form input, .flyout-form textarea {
+    width: 100%;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 0.5em;
+    margin-top: 0.2em;
+    font-size: 1em;
+}
+.flyout-form textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+</style>
+{% endblock %}

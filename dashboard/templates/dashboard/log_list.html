@@ -1,0 +1,29 @@
+<!-- dashboard/log_list.html -->
+{% extends 'base.html' %}
+{% load role_tags %}
+{% block content %}
+<div class="vsc-container">
+    {% include 'dashboard/_nav.html' %}
+    <main class="vsc-main">
+        <h2>Playbook Run Logs</h2>
+        <form method="get">
+            <label>Status: <input type="text" name="status" value="{{ request.GET.status }}"></label>
+            <label>Playbook: <input type="text" name="playbook" value="{{ request.GET.playbook }}"></label>
+            <button type="submit">Filter</button>
+        </form>
+        <table class="vsc-table">
+            <tr><th>Playbook</th><th>Started</th><th>Finished</th><th>Status</th><th>User</th><th>Output</th></tr>
+            {% for log in logs %}
+            <tr onclick="window.location='/logs/{{ log.pk }}/'" style="cursor:pointer;">
+                <td>{{ log.playbook.name }}</td>
+                <td>{{ log.started_at }}</td>
+                <td>{{ log.finished_at }}</td>
+                <td>{{ log.status }}</td>
+                <td>{{ log.triggered_by }}</td>
+                <td><pre style="max-width:400px; max-height:200px; overflow:auto; font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', monospace; background:#1e1e1e; color:#d4d4d4;">{{ log.output|truncatechars:500|vt100_to_html|safe }}</pre></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </main>
+</div>
+{% endblock %}

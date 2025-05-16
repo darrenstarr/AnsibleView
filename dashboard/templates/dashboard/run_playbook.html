@@ -1,0 +1,9 @@
+<!-- dashboard/run_playbook.html -->
+{% extends 'base.html' %}
+{% block content %}
+<h2>Run Playbook: {{ playbook.name }}</h2>
+<p>{{ playbook.description }}</p>
+<form method="post">{% csrf_token %}
+    <button type="submit">Run with Verbose Output</button>
+</form>
+{% endblock %}

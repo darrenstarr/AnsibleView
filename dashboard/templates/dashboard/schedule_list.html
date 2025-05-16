@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load custom_json %}
+{% block content %}
+<div class="vsc-container">
+    {% include 'dashboard/_nav.html' %}
+    <main class="vsc-main">
+        <h2>Scheduled Playbooks</h2>
+        <button class="vsc-btn" id="add-schedule-btn">Add Schedule</button>
+        <table class="vsc-table">
+            <tr><th>Playbook</th><th>Schedule</th><th>Enabled</th><th>Actions</th></tr>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.playbook.name }}</td>
+                <td>
+                    {% if task.schedule %}
+                        {% with sched=task.schedule|from_json %}
+                            {% if sched.type == 'once' %}
+                                Once at {{ sched.datetime|default:'(not set)' }}
+                            {% elif sched.type == 'daily' %}
+                                Every day at {{ sched.time|default:'(not set)' }}
+                            {% elif sched.type == 'weekly' %}
+                                Every week on
+                                {% for d in sched.days %}{{ d|capfirst }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                at {{ sched.time|default:'(not set)' }}
+                            {% elif sched.type == 'interval' %}
+                                Every {{ sched.value }} {{ sched.unit }}
+                            {% else %}
+                                (Unknown schedule)
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}—{% endif %}
+                </td>
+                <td>{{ task.enabled|yesno:"Yes,No" }}</td>
+                <td>
+                    <form method="post" class="edit-form" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="edit_id" value="{{ task.id }}">
+                        <button type="submit" class="vsc-btn edit-btn" data-id="{{ task.id }}">Edit</button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete_id" value="{{ task.id }}">
+                        <button type="submit" class="vsc-btn danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        <!-- Flyout form -->
+        <div id="flyout" class="flyout" {% if edit_id %}style="display:block;"{% else %}style="display:none;"{% endif %}>
+            <div class="flyout-content">
+                <h3 id="flyout-title">{% if edit_id %}Edit Schedule{% else %}Add/Edit Schedule{% endif %}</h3>
+                <form method="post" id="schedule-form">
+                    {% csrf_token %}
+                    {% if edit_id %}<input type="hidden" name="edit_id" value="{{ edit_id }}">{% endif %}
+                    <label>Playbook:<br>{{ form.playbook }}</label><br>
+                    <label>Schedule Type:<br>{{ form.schedule_type }}</label><br>
+                    <div id="schedule-fields">
+                        <div class="schedule-group" id="once-fields" style="display:none;">
+                            <label>Date & Time:<br>{{ form.once_datetime }}</label>
+                        </div>
+                        <div class="schedule-group" id="daily-fields" style="display:none;">
+                            <label>Time:<br>{{ form.daily_time }}</label>
+                        </div>
+                        <div class="schedule-group" id="weekly-fields" style="display:none;">
+                            <label>Days:<br>{{ form.weekly_days }}</label>
+                            <label>Time:<br>{{ form.weekly_time }}</label>
+                        </div>
+                        <div class="schedule-group" id="interval-fields" style="display:none;">
+                            <label>Every {{ form.interval_value }} {{ form.interval_unit }}</label>
+                        </div>
+                    </div>
+                    <label>Enabled: {{ form.enabled }}</label><br>
+                    <button type="submit" class="vsc-btn">Save</button>
+                    <button type="button" class="vsc-btn" id="close-flyout">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+<style>
+.flyout {
+    position: fixed;
+    top: 0; right: 0; width: 400px; height: 100%;
+    background: #1e1e1e; color: #d4d4d4;
+    box-shadow: -2px 0 8px #000a;
+    z-index: 1000;
+    transition: transform 0.3s;
+}
+.flyout-content { padding: 2em; }
+.flyout[style*="display: none"] { transform: translateX(100%); }
+.schedule-group { margin-bottom: 1em; }
+</style>
+<script>
+function showFields(type) {
+    document.getElementById('once-fields').style.display = (type === 'once') ? 'block' : 'none';
+    document.getElementById('daily-fields').style.display = (type === 'daily') ? 'block' : 'none';
+    document.getElementById('weekly-fields').style.display = (type === 'weekly') ? 'block' : 'none';
+    document.getElementById('interval-fields').style.display = (type === 'interval') ? 'block' : 'none';
+}
+document.getElementById('add-schedule-btn').onclick = function() {
+    document.getElementById('flyout-title').textContent = 'Add Schedule';
+    document.getElementById('flyout').style.display = 'block';
+    document.getElementById('schedule-form').reset();
+    showFields('once');
+};
+document.getElementById('close-flyout').onclick = function() {
+    document.getElementById('flyout').style.display = 'none';
+};
+if (document.getElementById('schedule-form')) {
+    document.getElementById('schedule-form').elements['schedule_type'].onchange = function() {
+        showFields(this.value);
+    };
+    // Show correct fields on load
+    showFields(document.getElementById('schedule-form').elements['schedule_type'].value);
+}
+</script>
+{% endblock %}

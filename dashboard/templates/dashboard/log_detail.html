@@ -1,0 +1,113 @@
+<!-- dashboard/log_detail.html -->
+{% extends 'base.html' %}
+{% load role_tags %}
+{% block content %}
+<div class="vsc-container">
+    {% include 'dashboard/_nav.html' %}
+    <main class="vsc-main">
+        <h2>Log Details</h2>
+        <table class="vsc-table">
+            <tr><th>Playbook</th><td>{{ log.playbook.name }}</td></tr>
+            <tr><th>Started</th><td>{{ log.started_at }}</td></tr>
+            <tr><th>Finished</th><td id="log-finished">{{ log.finished_at }}</td></tr>
+            <tr><th>Status</th><td id="log-status">{{ log.status }}</td></tr>
+            <tr><th>User</th><td>{{ log.triggered_by }}</td></tr>
+            <tr><th>Artifact Path</th><td id="artifact-path">{{ log.artifact_path }}</td></tr>
+            <tr><th>Git Command</th><td><pre style="white-space:pre-wrap;">{{ log.git_command }}</pre></td></tr>
+            <tr><th>Git Stdout</th><td><pre style="white-space:pre-wrap;">{{ log.git_stdout }}</pre></td></tr>
+            <tr><th>Git Stderr</th><td><pre style="white-space:pre-wrap; color:#d16969;">{{ log.git_stderr }}</pre></td></tr>
+            <tr><th>Ansible Command</th><td><pre style="white-space:pre-wrap;">{{ log.ansible_command }}</pre></td></tr>
+            <tr><th>Output</th><td>
+                <!-- Move log filter form here -->
+                <form id="log-filter-form" style="margin-bottom:1em;">
+                    <label><input type="checkbox" class="log-filter" value="error" checked> <span style="color:#d16969;">Errors (Red)</span></label>
+                    <label><input type="checkbox" class="log-filter" value="info" checked> <span style="color:#569cd6;">Info (Blue)</span></label>
+                    <label><input type="checkbox" class="log-filter" value="normal" checked> <span style="color:#d4d4d4;">Normal (White)</span></label>
+                    <label><input type="checkbox" class="log-filter" value="skip" checked> <span style="color:#4ec9b0;">Skipped (Cyan)</span></label>
+                    <label><input type="checkbox" class="log-filter" value="debug" checked> <span style="color:#6a9955;">Debug (Green)</span></label>
+                </form>
+                <pre id="log-output">{{ log.output|vt100_to_html|safe }}</pre>
+            </td></tr>
+        </table>
+        <a href="/logs/" class="vsc-btn">Back to Logs</a>
+    </main>
+</div>
+<script>
+// Map color to filter class
+const colorMap = {
+    '#d16969': 'error', // Red
+    '#569cd6': 'info', // Blue
+    '#d4d4d4': 'normal', // White
+    '#4ec9b0': 'skip', // Cyan
+    '#ffffff': 'normal', // Bright White
+    '#808080': 'normal', // Black (middle gray)
+    '#6a9955': 'debug', // Green
+    '#b5cea8': 'debug', // Bright Green
+};
+function getFilterClass(style) {
+    if (!style) return 'normal';
+    for (const color in colorMap) {
+        if (style.includes(color)) return colorMap[color];
+    }
+    return 'normal';
+}
+// Always re-render from the original log HTML
+function tagLogLines(rawHtml, checked) {
+    // Split into lines, wrap each line in a span with a filter class, and filter
+    return rawHtml.split(/\n/).map(line => {
+        // Remove lines that are empty or only whitespace
+        if (line.replace(/<[^>]+>/g, '').trim() === '') return '';
+        // Find first span with style
+        const match = line.match(/<span style=\"([^\"]*)\">/);
+        let filterClass = 'normal';
+        if (match) filterClass = getFilterClass(match[1]);
+        if (!checked.includes(filterClass)) return '';
+        return `<span class="logline ${filterClass}">${line}</span>`;
+    }).filter(Boolean).join('\n');
+}
+function updateLogFilter() {
+    const pre = document.getElementById('log-output');
+    if (!pre) return;
+    const rawHtml = pre.dataset.rawLog;
+    const checked = Array.from(document.querySelectorAll('.log-filter:checked')).map(cb => cb.value);
+    pre.innerHTML = tagLogLines(rawHtml, checked);
+}
+function pollLogIfLive() {
+    let running = true;
+    function poll() {
+        fetch(window.location.pathname + '?partial=1')
+            .then(resp => resp.json())
+            .then(data => {
+                // Update log output and status
+                const pre = document.getElementById('log-output');
+                pre.innerHTML = data.output;
+                pre.dataset.rawLog = data.output;
+                document.getElementById('log-status').textContent = data.status;
+                if (data.finished_at !== undefined) {
+                    document.getElementById('log-finished').textContent = data.finished_at;
+                }
+                // Re-apply filters
+                updateLogFilter();
+                if (data.status === 'running' || data.status === 'pending') {
+                    setTimeout(poll, 1000);
+                }
+            });
+    }
+    poll();
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const pre = document.getElementById('log-output');
+    if (pre) {
+        pre.dataset.rawLog = pre.innerHTML; // Save original HTML for reparsing
+        updateLogFilter(); // Initial render
+    }
+    document.querySelectorAll('.log-filter').forEach(cb => {
+        cb.addEventListener('change', updateLogFilter);
+    });
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('live') === '1' || document.getElementById('log-status').textContent === 'running') {
+        pollLogIfLive();
+    }
+});
+</script>
+{% endblock %}

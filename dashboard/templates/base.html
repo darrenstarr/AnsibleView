@@ -1,0 +1,188 @@
+<!-- base.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ansible Admin Dashboard</title>
+    <style>
+        body {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Segoe UI', 'Liberation Sans', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .vsc-topbar {
+            width: 100vw;
+            background: #23272e;
+            color: #d4d4d4;
+            padding: 0.7em 2em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px #0002;
+            box-sizing: border-box;
+        }
+        .vsc-topbar .app-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            flex: 0 0 auto;
+        }
+        .vsc-topbar .user-info {
+            font-size: 1em;
+            color: #9cdcfe;
+            flex: 1 1 auto;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            min-width: 0;
+            overflow: visible;
+            white-space: nowrap;
+        }
+        .vsc-topbar .user-info a {
+            color: #9cdcfe;
+            margin-left: 0.7em;
+            text-decoration: none;
+        }
+        .vsc-topbar .user-info a:hover {
+            text-decoration: underline;
+        }
+        .vsc-container {
+            display: flex;
+            min-height: 100vh;
+            margin-top: 3.2em;
+        }
+        .vsc-nav {
+            width: 220px;
+            background: #23272e;
+            border-right: 1px solid #333;
+            padding-top: 2em;
+            min-height: calc(100vh - 3.2em);
+            position: fixed;
+            top: 3.2em;
+            left: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .vsc-nav-main {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 0 1 auto;
+        }
+        .vsc-nav-bottom {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5em 0;
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .vsc-nav-bottom li {
+            margin-top: auto;
+        }
+        .vsc-nav ul {
+            width: 100%;
+        }
+        .vsc-nav li {
+            margin: 0 0 1em 0;
+        }
+        .vsc-nav a {
+            color: #d4d4d4;
+            text-decoration: none;
+            display: block;
+            padding: 0.75em 1.5em;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .vsc-nav a:hover, .vsc-nav a:focus {
+            background: #2c2c32;
+            color: #fff;
+        }
+        .vsc-main {
+            flex: 1;
+            padding: 2em 3em;
+            margin-left: 220px;
+        }
+        .vsc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+            background: #23272e;
+            color: #d4d4d4;
+        }
+        .vsc-table th, .vsc-table td {
+            border: 1px solid #333;
+            padding: 0.75em 1em;
+        }
+        .vsc-table th {
+            background: #252526;
+        }
+        .vsc-btn {
+            background: #0e639c;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 0.5em 1.2em;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+        .vsc-btn:hover, .vsc-btn:focus {
+            background: #1177bb;
+        }
+        /* Scrollbar styling for dark mode */
+        ::-webkit-scrollbar {
+            width: 10px;
+            background: #23272e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 5px;
+        }
+        @media (max-width: 700px) {
+            .vsc-nav { width: 60px; }
+            .vsc-main { margin-left: 60px; padding: 1em 0.5em; }
+            .vsc-nav a { padding: 0.75em 0.5em; font-size: 0.9em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="vsc-topbar">
+        <span class="app-title">Ansible View</span>
+        <span class="user-info">
+            {% if user.is_authenticated %}
+                <span style="overflow:hidden;text-overflow:ellipsis;max-width:200px;display:inline-block;vertical-align:middle;">{{ user.username }}</span>
+                <a href="/accounts/logout/">Logout</a>
+            {% else %}
+                <a href="/admin/login/">Login</a>
+            {% endif %}
+        </span>
+    </div>
+    <div class="vsc-container">
+        <div class="vsc-nav">
+            <ul class="vsc-nav-main">
+                <li><a href="/admin/">Dashboard</a></li>
+                <li><a href="/admin/servers/">Servers</a></li>
+                <li><a href="/admin/playbooks/">Playbooks</a></li>
+                <li><a href="/admin/inventory/">Inventory</a></li>
+                <li><a href="/admin/credentials/">Credentials</a></li>
+            </ul>
+            <ul class="vsc-nav-bottom">
+                <li><a href="/admin/docs/">Documentation</a></li>
+                <li><a href="/admin/support/">Support</a></li>
+            </ul>
+        </div>
+        <div class="vsc-main">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>

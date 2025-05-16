@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Django stuff:
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# VS Code settings
+.vscode/
+
+# Environment variables
+.env
+.env.*
+
+# Artifacts and Ansible Runner output
+artifacts/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Python virtualenv
+venv/
+ENV/
+.env/
+.venv/
+
+# Migrations (optional, keep if you want to ignore generated migrations)
+# dashboard/migrations/*.pyc
+# dashboard/migrations/*.py~
+
+# Test output
+htmlcov/
+.coverage
+.tox/
+
+# pipenv
+Pipfile.lock
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# pytest
+.cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
